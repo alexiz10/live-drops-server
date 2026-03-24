@@ -9,6 +9,7 @@ from app.core.supertokens import init_supertokens
 from app.core.redis import redis_client
 
 from app.api.bids import router as bids_router
+from app.api.websockets import router as websocket_router
 
 init_supertokens()
 
@@ -34,6 +35,7 @@ app.add_middleware(
 )
 
 app.include_router(bids_router, prefix=settings.API_V1_STR)
+app.include_router(websocket_router, prefix=settings.API_V1_STR)
 
 @app.get("/health")
 async def health_check():

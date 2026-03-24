@@ -5,6 +5,7 @@ from redis.exceptions import WatchError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update
 
+from app.core.websocket import manager
 from app.models import Bid, Auction
 
 class BiddingService:
@@ -52,6 +53,15 @@ class BiddingService:
                 )
 
                 await self.db.commit()
+
+                await manager.broadcast_to_auction(
+                    auction_id,
+                    {
+                        "event": "new_highest_bid",
+                        "new_price": str(bid_amount),
+                        "bidder_id": str(user_id)
+                    }
+                )
 
                 return True
             except WatchError:
