@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from supertokens_python import get_all_cors_headers
@@ -5,10 +6,20 @@ from supertokens_python.framework.fastapi import get_middleware
 
 from app.core.config import settings
 from app.core.supertokens import init_supertokens
+from app.core.redis import redis_client
 
 init_supertokens()
 
-app = FastAPI(title=settings.PROJECT_NAME)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await redis_client.ping()
+    print("Successfully connected to Redis.")
+    yield
+
+    await redis_client.aclose()
+    print("Redis connection closed.")
+
+app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
 app.add_middleware(get_middleware())
 
