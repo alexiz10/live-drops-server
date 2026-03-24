@@ -8,6 +8,8 @@ from app.core.config import settings
 from app.core.supertokens import init_supertokens
 from app.core.redis import redis_client
 
+from app.api.bids import router as bids_router
+
 init_supertokens()
 
 @asynccontextmanager
@@ -30,6 +32,8 @@ app.add_middleware(
     allow_methods=["GET", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["Content-Type"] + get_all_cors_headers(),
 )
+
+app.include_router(bids_router, prefix=settings.API_V1_STR)
 
 @app.get("/health")
 async def health_check():
