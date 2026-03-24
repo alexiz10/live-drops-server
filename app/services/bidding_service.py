@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from decimal import Decimal
 from redis.asyncio import Redis
 from redis.exceptions import WatchError
@@ -31,6 +32,13 @@ class BiddingService:
                 if bid_amount <= current_price:
                     await pipe.unwatch()
                     return False
+
+                end_time_str = await self.redis.get(f"auction:{auction_id}:end_time")
+                if end_time_str:
+                    end_time = datetime.fromisoformat(end_time_str)
+                    if datetime.now(timezone.utc) >= end_time:
+                        await pipe.unwatch()
+                        return False
 
                 pipe.multi()
 
