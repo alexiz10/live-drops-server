@@ -1,0 +1,46 @@
+name: live-auction
+services:
+  db:
+    container_name: live-auction-db
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: auction_user
+      POSTGRES_PASSWORD: auction_password
+      POSTGRES_DB: auction_db
+      PGUSER: auction_user
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    container_name: live-auction-redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  supertokens:
+    container_name: live-auction-supertokens
+    image: registry.supertokens.io/supertokens/supertokens-postgresql:11.3.4
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3567:3567"
+    environment:
+      POSTGRESQL_USER: auction_user
+      POSTGRESQL_PASSWORD: auction_password
+      POSTGRESQL_HOST: live-auction-db
+      POSTGRESQL_PORT: 5432
+      POSTGRESQL_DATABASE_NAME: auction_db
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

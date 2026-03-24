@@ -1,0 +1,28 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv/
+.env
+env/
+venv/
+
+# OS specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+
+# Docker
+.docker/
+
+# Testing and Coverage
+.pytest_cache/
+coverage.xml
+htmlcov/

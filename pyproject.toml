@@ -1,0 +1,34 @@
+[tool.poetry]
+package-mode = false
+
+[project]
+name = "live-auction"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Alexiz Hernandez",email = "alexiz.developer@gmail.com"}
+]
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi (>=0.135.2,<0.136.0)",
+    "uvicorn (>=0.42.0,<0.43.0)",
+    "sqlalchemy (>=2.0.48,<3.0.0)",
+    "asyncpg (>=0.31.0,<0.32.0)",
+    "redis (>=7.3.0,<8.0.0)",
+    "pydantic-settings (>=2.13.1,<3.0.0)",
+    "websockets (>=16.0,<17.0)",
+    "supertokens-python (>=0.31.2,<0.32.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.0.2,<10.0.0)",
+    "pytest-asyncio (>=1.3.0,<2.0.0)",
+    "ruff (>=0.15.7,<0.16.0)",
+    "alembic (>=1.18.4,<2.0.0)"
+]
