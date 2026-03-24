@@ -7,7 +7,7 @@ from supertokens_python.recipe.session.framework.fastapi import verify_session
 from supertokens_python.recipe.session import SessionContainer
 
 from app.core.database import get_db
-from app.core.redis import get_redis
+from app.core.cache import get_redis
 from app.models import User, Auction
 from app.schemas.auction import AuctionCreate, AuctionResponse
 

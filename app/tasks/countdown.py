@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, timezone
 
 from app.core.websocket import manager
-from app.core.redis import redis_client
+from app.core.cache import redis_client
 
 async def auction_countdown_broadcaster():
     """

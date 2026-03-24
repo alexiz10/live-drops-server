@@ -7,7 +7,7 @@ from supertokens_python.framework.fastapi import get_middleware
 
 from app.core.config import settings
 from app.core.supertokens import init_supertokens
-from app.core.redis import redis_client
+from app.core.cache import redis_client
 
 from app.api.auctions import router as auctions_router
 from app.api.bids import router as bids_router

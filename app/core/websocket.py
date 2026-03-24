@@ -21,7 +21,7 @@ class ConnectionManager:
             if not self.active_connections[auction_id]:
                 del self.active_connections[auction_id]
 
-    async def broadcast_to_action(self, auction_id: uuid.UUID, message: dict):
+    async def broadcast_to_auction(self, auction_id: uuid.UUID, message: dict):
         """Pushes a JSON message to everyone actively watching this specific auction."""
         if auction_id in self.active_connections:
             for connection in list(self.active_connections[auction_id]):
