@@ -3,6 +3,15 @@ from pydantic import BaseModel, Field, field_validator
 from datetime import datetime, timezone
 from decimal import Decimal
 
+def mask_email(email: str) -> str:
+    if not email or "@" not in email:
+        return "Anonymous"
+    name, domain = email.split("@")
+    masked_name = name[:2] + "***" if len(name) > 2 else name + "***"
+    parts = domain.split(".")
+    masked_domain = parts[0][:2] + "***." + ".".join(parts[1:]) if len(parts[0]) > 4 else domain
+    return f"{masked_name}@{masked_domain}"
+
 class AuctionBase(BaseModel):
     title: str = Field(..., min_length=3, max_length=255)
     description: str
@@ -22,6 +31,8 @@ class AuctionResponse(AuctionBase):
     id: uuid.UUID
     current_price: Decimal
     owner_id: uuid.UUID
+    highest_bidder_id: uuid.UUID | None = None
+    highest_bidder_email: str | None = None
 
     # This tells Pydantic to read the data even if it's coming from a SQLAlchemy model
     model_config = {"from_attributes": True}

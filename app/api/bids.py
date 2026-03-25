@@ -39,6 +39,7 @@ async def place_bid_endpoint(
     success = await bidding_service.place_bid(
         auction_id=auction_id,
         user_id=user.id,
+        user_email=user.email,
         bid_amount=bid_in.amount
     )
 

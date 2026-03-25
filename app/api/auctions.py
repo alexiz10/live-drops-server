@@ -10,8 +10,8 @@ from supertokens_python.recipe.session import SessionContainer
 
 from app.core.database import get_db
 from app.core.cache import get_redis
-from app.models import User, Auction
-from app.schemas.auction import AuctionCreate, AuctionResponse
+from app.models import User, Auction, Bid
+from app.schemas.auction import AuctionCreate, AuctionResponse, mask_email
 
 router = APIRouter(tags=["Auctions"])
 
@@ -81,5 +81,22 @@ async def get_auction_endpoint(
 
     if not auction:
         raise HTTPException(status_code=404, detail="Auction not found")
+
+    stmt = (
+        select(Bid.bidder_id, User.email)
+        .join(User, User.id == Bid.bidder_id)
+        .where(Bid.auction_id == auction_id)
+        .order_by(Bid.amount.desc())
+        .limit(1)
+    )
+    highest_bid_result = await db.execute(stmt)
+    highest_bid = highest_bid_result.first()
+
+    if highest_bid:
+        auction.highest_bidder_id = highest_bid.bidder_id
+        auction.highest_bidder_email = mask_email(highest_bid.email)
+    else:
+        auction.highest_bidder_id = None
+        auction.highest_bidder_email = None
 
     return auction

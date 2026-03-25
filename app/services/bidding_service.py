@@ -4,23 +4,27 @@ from decimal import Decimal
 from redis.asyncio import Redis
 from redis.exceptions import WatchError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import update
+from sqlalchemy import update, select
 
 from app.core.websocket import manager
-from app.models import Bid, Auction
+from app.models import Bid, Auction, User
+from app.schemas.auction import mask_email
 
 class BiddingService:
     def __init__(self, redis_client: Redis, db_session: AsyncSession):
         self.redis = redis_client
         self.db = db_session
 
-    async def place_bid(self, auction_id: uuid.UUID, user_id: uuid.UUID, bid_amount: Decimal) -> bool:
+    async def place_bid(self, auction_id: uuid.UUID, user_id: uuid.UUID, user_email: str, bid_amount: Decimal) -> bool:
         """
         Attempts to place a bid using Redis Optimistic Locking.
         Returns True if successful, False if outbid or the bid is too low.
         """
+        safe_email = mask_email(user_email)
+
         price_key = f"auction:{auction_id}:price"
         bidder_key = f"auction:{auction_id}:bidder"
+        bidder_email_key = f"auction:{auction_id}:bidder_email"
 
         async with self.redis.pipeline() as pipe:
             try:
@@ -44,6 +48,7 @@ class BiddingService:
 
                 await pipe.set(price_key, str(bid_amount))
                 await pipe.set(bidder_key, str(user_id))
+                await pipe.set(bidder_email_key, safe_email)
 
                 await pipe.execute()
 
@@ -67,7 +72,8 @@ class BiddingService:
                     {
                         "event": "new_highest_bid",
                         "new_price": str(bid_amount),
-                        "bidder_id": str(user_id)
+                        "bidder_id": str(user_id),
+                        "bidder_email": str(safe_email)
                     }
                 )
 
