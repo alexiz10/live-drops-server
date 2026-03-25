@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from redis.asyncio import Redis
+from typing import List
 
 from supertokens_python.recipe.session.framework.fastapi import verify_session
 from supertokens_python.recipe.session import SessionContainer
@@ -13,6 +14,16 @@ from app.models import User, Auction
 from app.schemas.auction import AuctionCreate, AuctionResponse
 
 router = APIRouter(tags=["Auctions"])
+
+@router.get("/", response_model=List[AuctionResponse])
+async def list_auctions_endpoint(
+        db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(Auction).order_by(Auction.end_time.asc()))
+
+    auctions = result.scalars().all()
+
+    return auctions
 
 @router.post(
     "/",
