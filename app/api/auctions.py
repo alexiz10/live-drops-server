@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -58,3 +59,16 @@ async def create_auction_endpoint(
         await pipe.execute()
 
     return new_auction
+
+@router.get("/{auction_id}", response_model=AuctionResponse)
+async def get_auction_endpoint(
+        auction_id: uuid.UUID,
+        db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(Auction).where(Auction.id == auction_id))
+    auction = result.scalar_one_or_none()
+
+    if not auction:
+        raise HTTPException(status_code=404, detail="Auction not found")
+
+    return auction
