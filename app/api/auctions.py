@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from redis.asyncio import Redis
-from typing import Literal, List
+from typing import Literal, Optional
 
 from supertokens_python.recipe.session.framework.fastapi import verify_session
 from supertokens_python.recipe.session import SessionContainer
@@ -129,7 +129,8 @@ async def create_auction_endpoint(
 @router.get("/{auction_id}", response_model=AuctionResponse)
 async def get_auction_endpoint(
         auction_id: uuid.UUID,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
+        session: Optional[SessionContainer] = Depends(verify_session(session_required=False))
 ):
     result = await db.execute(select(Auction).where(Auction.id == auction_id))
     auction = result.scalar_one_or_none()
@@ -137,6 +138,7 @@ async def get_auction_endpoint(
     if not auction:
         raise HTTPException(status_code=404, detail="Auction not found")
 
+    # fetch the highest bidder
     stmt = (
         select(Bid.bidder_id, User.email, User.supertokens_id)
         .join(User, User.id == Bid.bidder_id)
@@ -153,5 +155,21 @@ async def get_auction_endpoint(
     else:
         auction.highest_bidder_id = None
         auction.highest_bidder_email = None
+
+    # check if the current user has ever bid on this item
+    auction.user_has_participated = False
+
+    if session:
+        st_id = session.get_user_id()
+        user_res = await db.execute(select(User).where(User.supertokens_id == st_id))
+        user = user_res.scalar_one_or_none()
+
+        if user:
+            # look for any bid by this user on this auction
+            participation_check = await db.execute(
+                select(Bid).where(Bid.auction_id == auction_id, Bid.bidder_id == user.id).limit(1)
+            )
+            if participation_check.first():
+                auction.user_has_participated = True
 
     return auction

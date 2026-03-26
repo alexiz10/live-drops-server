@@ -37,7 +37,7 @@ async def test_place_bid_success(db_session, clean_redis):
     success = await service.place_bid(
         auction_id=auction.id,
         user_id=user.id,
-        bid_amount=Decimal("150.00")
+        max_bid_amount=Decimal("150.00")
     )
 
     # assert: did it work in Redis and the DB?
@@ -65,7 +65,7 @@ async def test_place_bid_too_low(db_session, clean_redis):
     success = await service.place_bid(
         auction_id=auction_id,
         user_id=uuid.uuid4(),
-        bid_amount=Decimal("150.00")
+        max_bid_amount=Decimal("150.00")
     )
 
     # assert

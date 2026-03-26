@@ -6,3 +6,4 @@ class BidCreate(BaseModel):
 
 class BidResponse(BaseModel):
     message: str
+    is_winner: bool

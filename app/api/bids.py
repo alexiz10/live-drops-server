@@ -36,18 +36,18 @@ async def place_bid_endpoint(
 
     bidding_service = BiddingService(redis_client=redis_client, db_session=db)
 
-    success = await bidding_service.place_bid(
+    bid_result = await bidding_service.place_bid(
         auction_id=auction_id,
         user_id=user.id,
         supertokens_id=user.supertokens_id,
         user_email=user.email,
-        bid_amount=bid_in.amount
+        max_bid_amount=bid_in.amount
     )
 
-    if not success:
+    if not bid_result["success"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Bid rejected. You were outbid or the amount is too low."
+            detail=bid_result["message"]
         )
 
-    return BidResponse(message="Bid placed successfully")
+    return {"message": "Bid processed successfully", "is_winner": bid_result["is_winner"]}
