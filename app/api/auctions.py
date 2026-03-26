@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from redis.asyncio import Redis
-from typing import Literal, Optional
+from typing import Literal, Optional, List
 
 from supertokens_python.recipe.session.framework.fastapi import verify_session
 from supertokens_python.recipe.session import SessionContainer
@@ -14,6 +14,7 @@ from app.core.database import get_db
 from app.core.cache import get_redis
 from app.models import User, Auction, Bid
 from app.schemas.auction import AuctionCreate, AuctionResponse, PaginatedAuctions, mask_email
+from app.schemas.bid import BidHistoryItem
 
 router = APIRouter(tags=["Auctions"])
 
@@ -173,3 +174,12 @@ async def get_auction_endpoint(
                 auction.user_has_participated = True
 
     return auction
+
+@router.get("/{auction_id}/bids", response_model=List[BidHistoryItem])
+async def get_auction_bids_endpoint(
+        auction_id: uuid.UUID,
+        db: AsyncSession = Depends(get_db)
+):
+    stmt = select(Bid).where(Bid.auction_id == auction_id).order_by(Bid.created_at.asc())
+    result = await db.execute(stmt)
+    return result.scalars().all()
