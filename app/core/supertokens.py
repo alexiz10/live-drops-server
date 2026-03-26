@@ -54,8 +54,8 @@ def init_supertokens():
     init(
         app_info=InputAppInfo(
             app_name=settings.PROJECT_NAME,
-            api_domain="http://localhost:8000",
-            website_domain="http://localhost:5173",
+            api_domain=settings.API_DOMAIN,
+            website_domain=settings.FRONTEND_URL,
             api_base_path="/auth",
             website_base_path="/auth"
         ),
