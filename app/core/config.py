@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
 from typing import Optional
 
 class Settings(BaseSettings):
@@ -35,12 +36,34 @@ class Settings(BaseSettings):
     def async_database_url(self) -> str:
         """Uses the provided URL, or constructs it for local dev"""
         if self.DATABASE_URL:
-            # SQLAlchemy asyncpg requires this specific prefix
-            if self.DATABASE_URL.startswith("postgres://"):
-                return self.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
-            if self.DATABASE_URL.startswith("postgresql://"):
-                return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-            return self.DATABASE_URL
+            # safely parse the URL components
+            parsed_url = urlparse(self.DATABASE_URL)
+
+            # extract the query parameters into a dictionary
+            query_params = dict(parse_qsl(parsed_url.query))
+
+            # remove 'sslmode' safely if it exists
+            query_params.pop('sslmode', None)
+
+            # rebuild the query string
+            new_query = urlencode(query_params)
+
+            # explicitly pass the 6-tuple to preserve strict 'str' typing
+            clean_url: str = urlunparse((
+                parsed_url.scheme,
+                parsed_url.netloc,
+                parsed_url.path,
+                parsed_url.params,
+                new_query,
+                parsed_url.fragment
+            ))
+
+            # add the asyncpg driver prefix
+            if clean_url.startswith("postgres://"):
+                return clean_url.replace("postgres://", "postgresql+asyncpg://", 1)
+            if clean_url.startswith("postgresql://"):
+                return clean_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            return clean_url
 
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
