@@ -61,6 +61,7 @@ def init_supertokens():
         ),
         supertokens_config=SupertokensConfig(
             connection_uri=settings.SUPERTOKENS_CONNECTION_URI,
+            api_key=settings.SUPERTOKENS_API_KEY,
         ),
         framework="fastapi",
         recipe_list=[
