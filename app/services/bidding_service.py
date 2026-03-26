@@ -15,7 +15,7 @@ class BiddingService:
         self.redis = redis_client
         self.db = db_session
 
-    async def place_bid(self, auction_id: uuid.UUID, user_id: uuid.UUID, user_email: str, bid_amount: Decimal) -> bool:
+    async def place_bid(self, auction_id: uuid.UUID, user_id: uuid.UUID, supertokens_id: str, user_email: str, bid_amount: Decimal) -> bool:
         """
         Attempts to place a bid using Redis Optimistic Locking.
         Returns True if successful, False if outbid or the bid is too low.
@@ -72,7 +72,7 @@ class BiddingService:
                     {
                         "event": "new_highest_bid",
                         "new_price": str(bid_amount),
-                        "bidder_id": str(user_id),
+                        "bidder_id": supertokens_id,
                         "bidder_email": str(safe_email)
                     }
                 )

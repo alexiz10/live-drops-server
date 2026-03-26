@@ -2,6 +2,7 @@ import uuid
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime, timezone
 from decimal import Decimal
+from typing import List
 
 def mask_email(email: str) -> str:
     if not email or "@" not in email:
@@ -36,3 +37,10 @@ class AuctionResponse(AuctionBase):
 
     # This tells Pydantic to read the data even if it's coming from a SQLAlchemy model
     model_config = {"from_attributes": True}
+
+class PaginatedAuctions(BaseModel):
+    items: List[AuctionResponse]
+    total: int
+    page: int
+    size: int
+    total_pages: int

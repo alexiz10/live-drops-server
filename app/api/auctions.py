@@ -1,9 +1,11 @@
+import math
 import uuid
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from redis.asyncio import Redis
-from typing import List
+from typing import Literal, List
 
 from supertokens_python.recipe.session.framework.fastapi import verify_session
 from supertokens_python.recipe.session import SessionContainer
@@ -11,19 +13,72 @@ from supertokens_python.recipe.session import SessionContainer
 from app.core.database import get_db
 from app.core.cache import get_redis
 from app.models import User, Auction, Bid
-from app.schemas.auction import AuctionCreate, AuctionResponse, mask_email
+from app.schemas.auction import AuctionCreate, AuctionResponse, PaginatedAuctions, mask_email
 
 router = APIRouter(tags=["Auctions"])
 
-@router.get("/", response_model=List[AuctionResponse])
+@router.get("/", response_model=PaginatedAuctions)
 async def list_auctions_endpoint(
+        status: Literal["active", "ended"] = "active",
+        page: int = 1,
+        size: int = 12,
         db: AsyncSession = Depends(get_db)
 ):
-    result = await db.execute(select(Auction).order_by(Auction.end_time.asc()))
+    now = datetime.now(timezone.utc)
 
-    auctions = result.scalars().all()
+    condition = Auction.end_time > now if status == "active" else Auction.end_time <= now
 
-    return auctions
+    count_query = select(func.count(Auction.id)).where(condition)
+    total = (await db.execute(count_query)).scalar_one()
+
+    query = select(Auction).where(condition)
+    query = query.order_by(Auction.end_time.asc() if status == "active" else Auction.end_time.desc())
+    query = query.limit(size).offset((page - 1) * size)
+
+    auctions = (await db.execute(query)).scalars().all()
+
+    return PaginatedAuctions(
+        items=list(auctions),
+        total=total,
+        page=page,
+        size=size,
+        total_pages=math.ceil(total / size) if total > 0 else 1
+    )
+
+@router.get("/me/listings", response_model=PaginatedAuctions)
+async def get_my_auctions_endpoint(
+        status: Literal["active", "ended"] = "active",
+        page: int = 1,
+        size: int = 12,
+        session: SessionContainer = Depends(verify_session()),
+        db: AsyncSession = Depends(get_db)
+):
+    supertokens_id = session.get_user_id()
+    user_res = await db.execute(select(User).where(User.supertokens_id == supertokens_id))
+    user = user_res.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    now = datetime.now(timezone.utc)
+
+    condition = (Auction.owner_id == user.id) & (Auction.end_time > now if status == "active" else Auction.end_time <= now)
+
+    total = (await db.execute(select(func.count(Auction.id)).where(condition))).scalar_one()
+
+    query = select(Auction).where(condition)
+    query = query.order_by(Auction.end_time.asc() if status == "active" else Auction.end_time.desc())
+    query = query.limit(size).offset((page - 1) * size)
+
+    auctions = (await db.execute(query)).scalars().all()
+
+    return PaginatedAuctions(
+        items=list(auctions),
+        total=total,
+        page=page,
+        size=size,
+        total_pages=math.ceil(total / size) if total > 0 else 1
+    )
 
 @router.post(
     "/",
@@ -83,7 +138,7 @@ async def get_auction_endpoint(
         raise HTTPException(status_code=404, detail="Auction not found")
 
     stmt = (
-        select(Bid.bidder_id, User.email)
+        select(Bid.bidder_id, User.email, User.supertokens_id)
         .join(User, User.id == Bid.bidder_id)
         .where(Bid.auction_id == auction_id)
         .order_by(Bid.amount.desc())
@@ -93,7 +148,7 @@ async def get_auction_endpoint(
     highest_bid = highest_bid_result.first()
 
     if highest_bid:
-        auction.highest_bidder_id = highest_bid.bidder_id
+        auction.highest_bidder_id = uuid.UUID(highest_bid.supertokens_id)
         auction.highest_bidder_email = mask_email(highest_bid.email)
     else:
         auction.highest_bidder_id = None
