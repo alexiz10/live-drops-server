@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.supertokens import init_supertokens
 from app.core.cache import redis_client
 
+from app.api.admin import router as admin_router
 from app.api.auctions import router as auctions_router
 from app.api.bids import router as bids_router
 from app.api.websockets import router as websocket_router
@@ -48,6 +49,7 @@ app.add_middleware(
     allow_headers=["Content-Type"] + get_all_cors_headers(),
 )
 
+app.include_router(admin_router, prefix=settings.API_V1_STR)
 app.include_router(auctions_router, prefix=f"{settings.API_V1_STR}/auctions")
 app.include_router(bids_router, prefix=settings.API_V1_STR)
 app.include_router(websocket_router, prefix=settings.API_V1_STR)

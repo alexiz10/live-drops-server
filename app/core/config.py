@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     SUPERTOKENS_CONNECTION_URI: str = "http://localhost:3567"
     SUPERTOKENS_API_KEY: Optional[str] = None
 
+    # Scheduled Tasks
+    CRON_SECRET: str = "fallback-secret-for-local-dev"
+
     @property
     def async_database_url(self) -> str:
         """Uses the provided URL, or constructs it for local dev"""

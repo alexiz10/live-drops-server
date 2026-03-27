@@ -1,5 +1,7 @@
+from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String
+from sqlalchemy import String, DateTime
+from sqlalchemy.sql import func
 
 from app.models.base import Base
 
@@ -8,6 +10,7 @@ class User(Base):
 
     supertokens_id: Mapped[str] = mapped_column(String, unique=True, index=True)
     email: Mapped[str] = mapped_column(String, unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     auctions: Mapped[list["Auction"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
     bids: Mapped[list["Bid"]] = relationship(back_populates="bidder", cascade="all, delete-orphan")
