@@ -1,0 +1,19 @@
+name: Hourly Database Cleanup
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping FastAPI Cleanup Endpoint
+        run: |
+          curl -X DELETE https://api.livedrops.alexiz.dev/api/v1/cleanup \
+          -H "cron_secret: ${{ secrets.CRON_SECRET }}" \
+          --max-time 120 \
+          --retry 5 \
+          --retry-delay 10 \
+          --retry-all-errors
