@@ -12,7 +12,7 @@ jobs:
       - name: Ping FastAPI Cleanup Endpoint
         run: |
           curl -X DELETE https://api.livedrops.alexiz.dev/api/v1/cleanup \
-          -H "cron_secret: ${{ secrets.CRON_SECRET }}" \
+          -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
           --max-time 120 \
           --retry 5 \
           --retry-delay 10 \

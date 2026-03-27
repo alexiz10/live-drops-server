@@ -12,7 +12,7 @@ router = APIRouter(tags=["Admin"])
 
 @router.delete("/cleanup")
 async def cleanup_old_data(
-        cron_secret: str = Header(None),
+        cron_secret: str = Header(None, alias="x-cron-secret"),
         db: AsyncSession = Depends(get_db)
 ):
     # verify request
