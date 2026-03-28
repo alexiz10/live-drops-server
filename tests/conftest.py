@@ -4,8 +4,29 @@ import redis.asyncio as redis_async
 from testcontainers.postgres import PostgresContainer
 from testcontainers.redis import RedisContainer
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from httpx import AsyncClient, ASGITransport
 
+from app.main import app
 from app.models import Base
+from app.core.database import get_db
+
+@pytest.fixture
+async def async_client(db_session):
+    """
+    Creates a test client and forces the FastAPI app to use the
+    ephemeral test database session instead of the non-test one.
+    """
+
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    transport = ASGITransport(app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        yield client
+
+    app.dependency_overrides.clear()
 
 @pytest.fixture(scope="session")
 def postgres_url():
