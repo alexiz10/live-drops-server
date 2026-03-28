@@ -10,6 +10,7 @@ from app.core.websocket import manager
 from app.models import Bid, Auction, User
 from app.schemas.auction import mask_email
 
+
 class BiddingService:
     def __init__(self, redis_client: Redis, db_session: AsyncSession):
         self.redis = redis_client
@@ -36,13 +37,16 @@ class BiddingService:
 
                 # fetch current state
                 current_price_str = await pipe.get(price_key)
-                current_price = Decimal(current_price_str) if current_price_str else Decimal("0.00")
+                current_price = Decimal(
+                    current_price_str) if current_price_str else Decimal("0.00")
 
                 current_max_str = await pipe.get(max_bid_key)
-                current_max = Decimal(current_max_str) if current_max_str else Decimal("0.00")
+                current_max = Decimal(
+                    current_max_str) if current_max_str else Decimal("0.00")
 
                 current_bidder = await pipe.get(bidder_key)
-                current_bidder = current_bidder.decode("utf-8") if isinstance(current_bidder, bytes) else current_bidder
+                current_bidder = current_bidder.decode(
+                    "utf-8") if isinstance(current_bidder, bytes) else current_bidder
 
                 # time check and anti-sniping logic
                 now = datetime.now(timezone.utc)
@@ -52,7 +56,8 @@ class BiddingService:
                     await pipe.unwatch()
                     return {"success": False, "message": "Auction time not found."}
 
-                end_time = datetime.fromisoformat(end_time_str.decode('utf-8') if isinstance(end_time_str, bytes) else end_time_str)
+                end_time = datetime.fromisoformat(end_time_str.decode(
+                    'utf-8') if isinstance(end_time_str, bytes) else end_time_str)
 
                 if now >= end_time:
                     await pipe.unwatch()
@@ -92,10 +97,12 @@ class BiddingService:
                     # proxy war
                     if max_bid_amount > current_max:
                         # the new bidder breaks through the old ceiling
-                        new_price = min(current_max + INCREMENT, max_bid_amount)
+                        new_price = min(
+                            current_max + INCREMENT, max_bid_amount)
                     else:
                         # the old bidder's proxy defends
-                        new_price = min(max_bid_amount + INCREMENT, current_max)
+                        new_price = min(max_bid_amount +
+                                        INCREMENT, current_max)
 
                         # revert the winner stats back to the defending champion
                         winning_user_id = current_bidder
@@ -103,9 +110,11 @@ class BiddingService:
 
                         # we have to fetch the old winner's details from Redis to broadcast them again
                         winning_email = await pipe.get(bidder_email_key)
-                        winning_email = winning_email.decode("utf-8") if isinstance(winning_email, bytes) else winning_email
+                        winning_email = winning_email.decode(
+                            "utf-8") if isinstance(winning_email, bytes) else winning_email
                         winning_supertokens_id = await pipe.get(supertokens_key)
-                        winning_supertokens_id = winning_supertokens_id.decode("utf-8") if isinstance(winning_supertokens_id, bytes) else winning_supertokens_id
+                        winning_supertokens_id = winning_supertokens_id.decode(
+                            "utf-8") if isinstance(winning_supertokens_id, bytes) else winning_supertokens_id
 
                 # lock in the new state
                 pipe.multi()
@@ -128,12 +137,22 @@ class BiddingService:
                 if new_price > current_price or not current_max:
                     update_values["current_price"] = new_price
 
-                    new_bid = Bid(
+                    # if this was a proxy battle where the incoming bidder lost, record their bid first
+                    if current_max and str(user_id) != winning_user_id:
+                        losing_bid = Bid(
+                            auction_id=auction_id,
+                            bidder_id=user_id,
+                            amount=max_bid_amount
+                        )
+                        self.db.add(losing_bid)
+
+                    # record the winning bid (either new winner or defender's automatic response)
+                    winning_bid = Bid(
                         auction_id=auction_id,
                         bidder_id=uuid.UUID(winning_user_id),
                         amount=new_price
                     )
-                    self.db.add(new_bid)
+                    self.db.add(winning_bid)
 
                 if time_extended:
                     update_values["end_time"] = new_end_time
@@ -147,6 +166,19 @@ class BiddingService:
                     await self.db.commit()
 
                 # broadcast the result
+                # if this was a proxy battle where the incoming bidder lost, broadcast their bid first
+                if current_max and str(user_id) != winning_user_id:
+                    await manager.broadcast_to_auction(
+                        auction_id,
+                        {
+                            "event": "new_highest_bid",
+                            "new_price": str(max_bid_amount),
+                            "bidder_id": supertokens_id,
+                            "bidder_email": safe_email
+                        }
+                    )
+
+                # then broadcast the final winning bid (either new winner or defender's automatic response)
                 await manager.broadcast_to_auction(
                     auction_id,
                     {
@@ -159,7 +191,8 @@ class BiddingService:
 
                 # broadcast the time extension
                 if time_extended:
-                    new_time_remaining = int((new_end_time - now).total_seconds())
+                    new_time_remaining = int(
+                        (new_end_time - now).total_seconds())
                     await manager.broadcast_to_auction(
                         auction_id,
                         {
@@ -178,5 +211,6 @@ class BiddingService:
 
             except Exception as e:
                 await self.db.rollback()
-                print(f"CRITICAL: Redis proxy failed for auction {auction_id}. Error: {e}")
+                print(
+                    f"CRITICAL: Redis proxy failed for auction {auction_id}. Error: {e}")
                 raise e
