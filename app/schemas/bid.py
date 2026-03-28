@@ -8,6 +8,7 @@ class BidCreate(BaseModel):
 class BidResponse(BaseModel):
     message: str
     is_winner: bool
+    user_max_bid: Decimal | None = None
 
 class BidHistoryItem(BaseModel):
     amount: Decimal

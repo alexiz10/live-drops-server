@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -50,4 +51,16 @@ async def place_bid_endpoint(
             detail=bid_result["message"]
         )
 
-    return {"message": "Bid processed successfully", "is_winner": bid_result["is_winner"]}
+    # fetch user's max bid if they are the winning bidder
+    user_max_bid = None
+    if bid_result["is_winner"]:
+        max_bid_key = f"auction:{auction_id}:max_bid"
+        max_bid_str = await redis_client.get(max_bid_key)
+        if max_bid_str:
+            user_max_bid = Decimal(max_bid_str)
+
+    return {
+        "message": "Bid processed successfully",
+        "is_winner": bid_result["is_winner"],
+        "user_max_bid": user_max_bid
+    }

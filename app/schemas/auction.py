@@ -35,6 +35,7 @@ class AuctionResponse(AuctionBase):
     highest_bidder_id: uuid.UUID | None = None
     highest_bidder_email: str | None = None
     user_has_participated: bool = False
+    user_max_bid: Decimal | None = None
 
     # This tells Pydantic to read the data even if it's coming from a SQLAlchemy model
     model_config = {"from_attributes": True}

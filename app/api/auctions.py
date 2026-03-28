@@ -1,6 +1,7 @@
 import math
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -131,7 +132,8 @@ async def create_auction_endpoint(
 async def get_auction_endpoint(
         auction_id: uuid.UUID,
         db: AsyncSession = Depends(get_db),
-        session: Optional[SessionContainer] = Depends(verify_session(session_required=False))
+        session: Optional[SessionContainer] = Depends(verify_session(session_required=False)),
+        redis_client: Redis = Depends(get_redis)
 ):
     result = await db.execute(select(Auction).where(Auction.id == auction_id))
     auction = result.scalar_one_or_none()
@@ -159,6 +161,7 @@ async def get_auction_endpoint(
 
     # check if the current user has ever bid on this item
     auction.user_has_participated = False
+    auction.user_max_bid = None
 
     if session:
         st_id = session.get_user_id()
@@ -172,6 +175,18 @@ async def get_auction_endpoint(
             )
             if participation_check.first():
                 auction.user_has_participated = True
+
+            # fetch user's max bid if they are the winning bidder
+            bidder_key = f"auction:{auction_id}:bidder"
+            max_bid_key = f"auction:{auction_id}:max_bid"
+
+            current_bidder = await redis_client.get(bidder_key)
+
+            # compare user.id with the stored bidder UUID (stored as string)
+            if current_bidder and str(user.id) == current_bidder:
+                max_bid_str = await redis_client.get(max_bid_key)
+                if max_bid_str:
+                    auction.user_max_bid = Decimal(max_bid_str)
 
     return auction
 
