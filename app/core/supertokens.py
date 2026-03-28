@@ -66,7 +66,7 @@ def init_supertokens():
         framework="fastapi",
         recipe_list=[
             session.init(
-                cookie_domain=".livedrops.alexiz.dev"
+                cookie_domain=settings.COOKIE_DOMAIN
             ),
             emailpassword.init(
                 override=emailpassword.InputOverrideConfig(

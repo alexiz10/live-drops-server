@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
+from urllib.parse import urlparse, urlunparse
 from typing import Optional
 
 class Settings(BaseSettings):
@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "LiveDrops"
     API_DOMAIN: str = "http://localhost:8000"
     API_V1_STR: str = "/api/v1"
+    COOKIE_DOMAIN: Optional[str] = None
 
     # CORS
     FRONTEND_URL: str = "http://localhost:5173"
